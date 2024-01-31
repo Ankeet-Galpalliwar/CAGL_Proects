@@ -1,0 +1,41 @@
+2024-01-31 20:40:00,307 [Worker-5: Loading available Gradle versions] INFO  o.e.b.c.i.u.g.PublishedGradleVersions - Gradle version information cache is out-of-date. Trying to update.
+2024-01-31 20:40:52,880 [Worker-11: Building] INFO  o.e.m.c.i.l.LifecycleMappingFactory - Using org.maven.ide.eclipse.wtp.WarLifecycleMapping lifecycle mapping for MavenProject: com.cagl:AuditTrail:0.0.1-SNAPSHOT @ C:\Users\Ankeet\Desktop\CAGL_PROJECT\AuditTrail\pom.xml.
+2024-01-31 20:41:01,284 [Worker-11: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Using 'UTF-8' encoding to copy filtered resources.
+2024-01-31 20:41:01,286 [Worker-11: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Using 'UTF-8' encoding to copy filtered properties files.
+2024-01-31 20:41:01,294 [Worker-11: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Copying 1 resource
+2024-01-31 20:41:01,321 [Worker-11: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Copying 0 resource
+2024-01-31 20:41:01,331 [Worker-11: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Using 'UTF-8' encoding to copy filtered resources.
+2024-01-31 20:41:01,331 [Worker-11: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Using 'UTF-8' encoding to copy filtered properties files.
+2024-01-31 20:41:01,331 [Worker-11: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\Users\Ankeet\Desktop\CAGL_PROJECT\AuditTrail\src\test\resources
+2024-01-31 20:41:15,112 [Worker-2: Updating Maven Dependencies] INFO  o.e.m.c.i.l.LifecycleMappingFactory - Using org.maven.ide.eclipse.wtp.WarLifecycleMapping lifecycle mapping for MavenProject: com.cagl:ExternalAPIS:0.0.1-SNAPSHOT @ C:\Users\Ankeet\Desktop\CAGL_PROJECT\ExternalAPIS\pom.xml.
+2024-01-31 20:41:16,531 [Worker-0: Building] INFO  o.e.m.c.i.l.LifecycleMappingFactory - Using org.maven.ide.eclipse.wtp.WarLifecycleMapping lifecycle mapping for MavenProject: com.cagl:ExternalAPIS:0.0.1-SNAPSHOT @ C:\Users\Ankeet\Desktop\CAGL_PROJECT\ExternalAPIS\pom.xml.
+2024-01-31 20:41:26,661 [Worker-0: Building] INFO  o.a.m.s.f.DefaultMavenResourcesFiltering - Copying 1 resource from src\main\resources to target\classes
+2024-01-31 20:41:26,726 [Worker-0: Building] INFO  o.a.m.s.f.DefaultMavenResourcesFiltering - Copying 0 resource from src\main\resources to target\classes
+2024-01-31 20:41:26,735 [Worker-0: Building] INFO  o.a.m.s.f.DefaultMavenResourcesFiltering - skip non existing resourceDirectory C:\Users\Ankeet\Desktop\CAGL_PROJECT\ExternalAPIS\src\test\resources
+2024-01-31 20:41:30,994 [Worker-11: Updating Maven Dependencies] INFO  o.e.m.c.i.l.LifecycleMappingFactory - Using org.maven.ide.eclipse.wtp.WarLifecycleMapping lifecycle mapping for MavenProject: com.cagl:ExternalAPIS:0.0.1-SNAPSHOT @ C:\Users\Ankeet\Desktop\CAGL_PROJECT\ExternalAPIS\pom.xml.
+2024-01-31 20:41:49,923 [Worker-2: Building] INFO  o.e.m.c.i.l.LifecycleMappingFactory - Using org.maven.ide.eclipse.wtp.WarLifecycleMapping lifecycle mapping for MavenProject: com.cagl:TwoWheelerEligibility:0.0.1-SNAPSHOT @ C:\Users\Ankeet\Desktop\CAGL_PROJECT\TwoWheelerEligibility\pom.xml.
+2024-01-31 20:41:51,693 [Worker-2: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Using 'UTF-8' encoding to copy filtered resources.
+2024-01-31 20:41:51,694 [Worker-2: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Using 'UTF-8' encoding to copy filtered properties files.
+2024-01-31 20:41:51,696 [Worker-2: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Copying 1 resource
+2024-01-31 20:41:51,875 [Worker-2: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Using 'UTF-8' encoding to copy filtered resources.
+2024-01-31 20:41:51,876 [Worker-2: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Using 'UTF-8' encoding to copy filtered properties files.
+2024-01-31 20:41:51,877 [Worker-2: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\Users\Ankeet\Desktop\CAGL_PROJECT\TwoWheelerEligibility\src\test\resources
+2024-01-31 20:41:52,141 [Worker-1: Updating Maven Dependencies] INFO  o.e.m.c.i.l.LifecycleMappingFactory - Using org.maven.ide.eclipse.wtp.WarLifecycleMapping lifecycle mapping for MavenProject: com.cagl:TwoWheelerEligibility:0.0.1-SNAPSHOT @ C:\Users\Ankeet\Desktop\CAGL_PROJECT\TwoWheelerEligibility\pom.xml.
+2024-01-31 20:42:18,694 [Worker-4: Updating Maven Dependencies] INFO  o.e.m.c.i.l.LifecycleMappingFactory - Using org.maven.ide.eclipse.wtp.WarLifecycleMapping lifecycle mapping for MavenProject: com.cagl:TwoWheelerExternalApi:0.0.1-SNAPSHOT @ C:\Users\Ankeet\Desktop\CAGL_PROJECT\TwoWheelerExternalApi\pom.xml.
+2024-01-31 20:42:19,068 [Worker-6: Building] INFO  o.e.m.c.i.l.LifecycleMappingFactory - Using org.maven.ide.eclipse.wtp.WarLifecycleMapping lifecycle mapping for MavenProject: com.cagl:TwoWheelerExternalApi:0.0.1-SNAPSHOT @ C:\Users\Ankeet\Desktop\CAGL_PROJECT\TwoWheelerExternalApi\pom.xml.
+2024-01-31 20:42:20,532 [Worker-6: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Using 'UTF-8' encoding to copy filtered resources.
+2024-01-31 20:42:20,533 [Worker-6: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Using 'UTF-8' encoding to copy filtered properties files.
+2024-01-31 20:42:20,534 [Worker-6: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Copying 1 resource
+2024-01-31 20:42:20,553 [Worker-6: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Copying 1 resource
+2024-01-31 20:42:20,565 [Worker-6: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Using 'UTF-8' encoding to copy filtered resources.
+2024-01-31 20:42:20,565 [Worker-6: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Using 'UTF-8' encoding to copy filtered properties files.
+2024-01-31 20:42:20,565 [Worker-6: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\Users\Ankeet\Desktop\CAGL_PROJECT\TwoWheelerExternalApi\src\test\resources
+2024-01-31 20:42:22,513 [Worker-5: Updating Maven Dependencies] INFO  o.e.m.c.i.l.LifecycleMappingFactory - Using org.maven.ide.eclipse.wtp.WarLifecycleMapping lifecycle mapping for MavenProject: com.cagl:TwoWheelerExternalApi:0.0.1-SNAPSHOT @ C:\Users\Ankeet\Desktop\CAGL_PROJECT\TwoWheelerExternalApi\pom.xml.
+2024-01-31 20:42:34,980 [Worker-6: Updating Maven Dependencies] INFO  o.e.m.c.i.l.LifecycleMappingFactory - Using org.maven.ide.eclipse.wtp.WarLifecycleMapping lifecycle mapping for MavenProject: com.project:TwoWheelerLoan1:0.0.1-SNAPSHOT @ C:\Users\Ankeet\Desktop\CAGL_PROJECT\TwoWheelerLoan\pom.xml.
+2024-01-31 20:42:40,950 [Worker-4: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Using 'UTF-8' encoding to copy filtered resources.
+2024-01-31 20:42:40,951 [Worker-4: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Using 'UTF-8' encoding to copy filtered properties files.
+2024-01-31 20:42:40,952 [Worker-4: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Copying 1 resource
+2024-01-31 20:42:41,103 [Worker-4: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Copying 1 resource
+2024-01-31 20:42:41,133 [Worker-4: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Using 'UTF-8' encoding to copy filtered resources.
+2024-01-31 20:42:41,133 [Worker-4: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - Using 'UTF-8' encoding to copy filtered properties files.
+2024-01-31 20:42:41,133 [Worker-4: Building] INFO  o.e.m.c.i.embedder.EclipseLogger - skip non existing resourceDirectory C:\Users\Ankeet\Desktop\CAGL_PROJECT\TwoWheelerLoan\src\test\resources
