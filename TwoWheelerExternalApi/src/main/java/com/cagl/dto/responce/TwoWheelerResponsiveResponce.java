@@ -37,7 +37,12 @@ public class TwoWheelerResponsiveResponce {
 	@JsonProperty("Derived_Attribute_3")
 	private String Derived_Attribute_3;
 
-	@JsonProperty("Segment")
-	private String Segment;
+	@JsonProperty("segment")
+	private String segment;
 
+	@JsonProperty("Familyincome")
+	private String Familyincome;
+	
+	@JsonProperty("Eligible_amount")
+	private String Eligible_amount;
 }

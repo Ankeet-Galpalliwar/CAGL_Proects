@@ -1,5 +1,8 @@
 package com.cag.twowheeler.controller;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,8 +18,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.cag.twowheeler.entity.ApiCallRecords;
 import com.cag.twowheeler.entity.User;
 import com.cag.twowheeler.exceptation.InvalidUser;
+import com.cag.twowheeler.repository.ApiCallRepository;
 import com.cag.twowheeler.repository.UserRepository;
 import com.cag.twowheeler.repository.UserRoleRepository;
 import com.cag.twowheeler.security.JwtAuthRequest;
@@ -45,9 +50,19 @@ public class AuthController {
 	@Autowired
 	UserRepository userRepository;
 	
+	@Autowired
+	ApiCallRepository apirecords;
+	
 
 	@PostMapping("/login/userlogin")
 	public ResponseEntity<JwtAuthResponse> creatToken(@RequestBody JwtAuthRequest authRequest) throws Exception {
+		
+		apirecords.save(ApiCallRecords.builder().apiname("login")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(authRequest.getUserName()+"="+authRequest.getPassword()).build());
+
+		
+		
 		this.authenticate(authRequest.getUserName(), authRequest.getPassword());
 
 		UserDetails userDetails = userDetailsService.loadUserByUsername(authRequest.getUserName());
@@ -89,7 +104,7 @@ public class AuthController {
 	}
 	
 	//=======External purpose=============
-	@GetMapping(" ")
+	@GetMapping("generatepassword")
 	public String passwordCreate(@RequestParam String password){
 		return encoder.encode(password);	
 	}

@@ -25,6 +25,7 @@ import com.cag.twowheeler.entity.VehicalPrice;
 import com.cag.twowheeler.entity.VehicalVariant;
 import com.cag.twowheeler.repository.MainDealerRepository;
 import com.cag.twowheeler.repository.StateAbbreviationRepository;
+import com.cag.twowheeler.repository.SubDealerRepository;
 import com.cag.twowheeler.repository.VehicalOemRepository;
 import com.cag.twowheeler.repository.VehicalPriceRepository;
 import com.cag.twowheeler.repository.VehicalVariantRepository;
@@ -46,6 +47,8 @@ public class TwoWheelerServiceImpl implements TwoWheelerService {
 	private StateAbbreviationRepository abbreviationRepository;
 	@Autowired
 	private MainDealerRepository mainDealerRepository;
+	@Autowired
+	private  SubDealerRepository subDealerRepository;
 
 	@Override
 	public List<VehicalsAllData> getAllVehicalData() {
@@ -90,13 +93,13 @@ public class TwoWheelerServiceImpl implements TwoWheelerService {
 			VehicalVariant ExistVariantType = v1.getType();
 			if (!data.getVehicleVariant().trim().equals(v1.getVariantName().trim())) {
 				// MOdifying Other place variant name
-				priceRepository.modifyVariantName(data.getVehicleVariant().trim(), v1.getVariantName());
+//				priceRepository.modifyVariantName(data.getVehicleVariant().trim(), v1.getVariantName());
 				// modifying variant Object
-				ExistVariantType.setVehicalvariantName(data.getVehicleVariant());
+//				ExistVariantType.setVehicalvariantName(data.getVehicleVariant());
 //				ExistVariantType.setFileName(data.getVehicleVariant() + ".jpg");
 //				ExistVariantType.setFilePath("D:\\Twowheeler_Dealer_managment_Documents\\Vehicle_Variant_Images\\"
 //						+ data.getVehicleVariant() + ".jpg");
-				ExistVariantType = variantRepository.save(ExistVariantType);
+//				ExistVariantType = variantRepository.save(ExistVariantType);
 
 			}
 			VehicalPrice build = VehicalPrice.builder().ExshowroomPrice(data.getExShowroomPrice())
@@ -193,10 +196,27 @@ public class TwoWheelerServiceImpl implements TwoWheelerService {
 					.vehicalMaxLoanAmount(insertVehicle.getVehicleMaxLoanAmount())
 					.vehicalOnRoadPrice(insertVehicle.getVehicalOnRoadPrice()).vehicalPriceID(variantPriceID).build();
 
-			priceRepository.save(build);
-
+			VehicalPrice save = priceRepository.save(build);
+			
+			// Newly inserted Variant  added in All Dealer Base on State
+//			List<MainDealer> mainDealers = mainDealerRepository.findByState(save.getState());
+//			if(!mainDealers.isEmpty()&mainDealers!=null) {
+//				mainDealers.stream().forEach(e->{
+//					List<VehicalPrice> mainveriants = e.getVeriants();
+//					mainveriants.add(save);
+//					mainDealerRepository.save(e);
+//					//variant add in subDealer
+//					try {
+//						e.getSubDealer().stream().forEach(sub->{
+//							List<VehicalPrice> subVeriants = sub.getVehicleVeriants();
+//							subVeriants.add(save);
+//							subDealerRepository.save(sub);
+//						});
+//					}catch (Exception ex) {
+//					}
+//				});
+//			}
 			return "New Vehicle Data Add Successfully";
-
 		}
 	}
 

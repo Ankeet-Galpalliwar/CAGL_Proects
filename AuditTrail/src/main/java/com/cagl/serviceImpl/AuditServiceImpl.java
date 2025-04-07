@@ -2,6 +2,7 @@ package com.cagl.serviceImpl;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.BeanUtils;
@@ -10,10 +11,10 @@ import org.springframework.stereotype.Service;
 
 import com.cagl.dto.AuditEnrollmentDto;
 import com.cagl.dto.AuditTrailDto;
-import com.cagl.entity.AuditEnrollment;
-import com.cagl.entity.AuditTrail;
-import com.cagl.repositorty.AuditEnrollmentRepository;
-import com.cagl.repositorty.AuditTrailRepository;
+import com.cagl.entity.datasource1.AuditEnrollment;
+import com.cagl.entity.datasource1.AuditTrail;
+import com.cagl.repositorty.datasource1.AuditEnrollmentRepository;
+import com.cagl.repositorty.datasource1.AuditTrailRepository;
 import com.cagl.service.AuditService;
 
 @Service

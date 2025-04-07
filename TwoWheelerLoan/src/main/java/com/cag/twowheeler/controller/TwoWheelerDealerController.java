@@ -3,20 +3,25 @@ package com.cag.twowheeler.controller;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.catalina.connector.Response;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.xssf.streaming.SXSSFCell;
 import org.apache.poi.xssf.streaming.SXSSFRow;
+import org.apache.poi.xssf.streaming.SXSSFSheet;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
@@ -27,6 +32,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -38,15 +44,24 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.cag.twowheeler.dto.BranchDto;
+import com.cag.twowheeler.dto.CheckerDealersDto;
 import com.cag.twowheeler.dto.MainDealerDetailsDto;
 import com.cag.twowheeler.dto.SubDealerDetailsDto;
 import com.cag.twowheeler.dto.VehicleVariantDto;
+import com.cag.twowheeler.dto.external.DealerBranchData;
+import com.cag.twowheeler.dto.external.DealerData;
+import com.cag.twowheeler.entity.ApiCallRecords;
 import com.cag.twowheeler.entity.Branch;
+import com.cag.twowheeler.entity.MainDealer;
 import com.cag.twowheeler.entity.StateAbbreviation;
+import com.cag.twowheeler.entity.SubDealer;
+import com.cag.twowheeler.repository.ApiCallRepository;
 import com.cag.twowheeler.repository.BranchRepository;
+import com.cag.twowheeler.repository.DealerDataRepository;
 import com.cag.twowheeler.repository.DistrictRepository;
 import com.cag.twowheeler.repository.MainDealerRepository;
 import com.cag.twowheeler.repository.StateAbbreviationRepository;
+import com.cag.twowheeler.repository.SubDealerRepository;
 import com.cag.twowheeler.repository.VehicalOemRepository;
 import com.cag.twowheeler.responce.responce;
 import com.cag.twowheeler.service.TwoWheelerDealerService;
@@ -74,7 +89,15 @@ public class TwoWheelerDealerController {
 	MainDealerRepository mainDealerRepository;
 
 	@Autowired
+	SubDealerRepository subDealerRepository;
+
+	@Autowired
 	VehicalOemRepository oemRepository;
+	
+	@Autowired
+	ApiCallRepository apirecords;
+	
+	
 
 	/**
 	 * 
@@ -82,7 +105,7 @@ public class TwoWheelerDealerController {
 	 */
 	@GetMapping("/allstatesdropdown")
 	public ResponseEntity<responce> allStateDropDown() {
-		List<String> state = Arrays.asList("KARNATAKA", "MAHARASHTRA", "TAMIL NADU");
+		List<String> state = Arrays.asList("KARNATAKA", "MAHARASHTRA", "TAMIL NADU", "MADHYA PRADESH");
 
 		List<String> allStates = new ArrayList<>();
 		List<StateAbbreviation> allStatesData = stateeAbbreviationRepository.findAll().stream()
@@ -130,15 +153,12 @@ public class TwoWheelerDealerController {
 	@GetMapping("/getoems")
 	public ResponseEntity<responce> getAvalialeOem() {
 		List<String> allAvaliableOem = dealerService.getOem();
-
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(responce.builder().error("FALSE").message("ALL Existing STATES").data(allAvaliableOem).build());
-
 	}
 
 	/**
 	 * @api used for Existing State for filter..!
-	 * 
 	 */
 	@GetMapping("/statedropdown")
 	public ResponseEntity<responce> dropDownState(@RequestParam String oem) {
@@ -156,7 +176,7 @@ public class TwoWheelerDealerController {
 		List<String> districts = dealerService.getDistricts(state);
 		if (!districts.isEmpty())
 			return ResponseEntity.status(HttpStatus.OK).body(responce.builder().error("false").data(districts)
-					.message("All districts Fetch Sucessfully").build());	
+					.message("All districts Fetch Sucessfully").build());
 
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
 				.body(responce.builder().error("false").data("--NA--").message("districts Not Preseant").build());
@@ -168,7 +188,6 @@ public class TwoWheelerDealerController {
 
 	@GetMapping("/regiondropdown")
 	public ResponseEntity<responce> getregion(@RequestParam String state) {
-
 		List<Branch> branches = branchRepository.findAll();
 		List<String> regions = new ArrayList<>();
 		regions = branches.stream().filter(e -> e.getState().equalsIgnoreCase(state)).map(e -> e.getRegion()).distinct()
@@ -193,8 +212,14 @@ public class TwoWheelerDealerController {
 	}
 
 	@PostMapping("/addmainbranch")
-	public ResponseEntity<responce> addMainBranches(@RequestParam String mainDealerID,
+	public ResponseEntity<responce> addMainBranches(Authentication authentication,@RequestParam String mainDealerID,
 			@RequestBody List<BranchDto> branches) {
+		
+		
+		apirecords.save(ApiCallRecords.builder().apiname("addmainbranch")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(authentication.getName()+"="+mainDealerID+"=>"+branches.stream().map(e->e.getBranchID()).collect(Collectors.toList()).toString()).build());
+		
 		String string = dealerService.addMainBranches(mainDealerID, branches);
 		if (string.equalsIgnoreCase("Sucessfully Added"))
 			return ResponseEntity.status(HttpStatus.OK)
@@ -206,8 +231,14 @@ public class TwoWheelerDealerController {
 	}
 
 	@DeleteMapping("/removemainbranch")
-	public ResponseEntity<responce> removeMainBranches(@RequestParam String mainDealerID,
+	public ResponseEntity<responce> removeMainBranches(Authentication authentication,@RequestParam String mainDealerID,
 			@RequestBody List<BranchDto> branches) {
+		
+		apirecords.save(ApiCallRecords.builder().apiname("removemainbranch")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(authentication.getName()+"="+mainDealerID+"=>"+branches.stream().map(e->e.getBranchID()).collect(Collectors.toList()).toString()).build());
+		
+		
 		Boolean responces = dealerService.removeMainBranches(mainDealerID, branches);
 		if (responces)
 			return ResponseEntity.status(HttpStatus.OK)
@@ -249,8 +280,12 @@ public class TwoWheelerDealerController {
 	 * @API Use To Add All Branches Base on Main Dealer
 	 */
 	@PostMapping("/addallmainbranches")
-	public ResponseEntity<responce> addAllMainBranches(@RequestParam String mainDealerID,
+	public ResponseEntity<responce> addAllMainBranches(Authentication authentication,@RequestParam String mainDealerID,
 			@RequestParam String subDealerID) {
+		apirecords.save(ApiCallRecords.builder().apiname("addallmainbranches")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(authentication.getName()+"="+mainDealerID+"=>"+subDealerID).build());
+
 		String responces = dealerService.addAllMainBranches(mainDealerID, subDealerID);
 		if (responces.equalsIgnoreCase("Sucessfully Added"))
 			return ResponseEntity.status(HttpStatus.OK)
@@ -260,9 +295,29 @@ public class TwoWheelerDealerController {
 				.body(responce.builder().error("TRUE").message("NOT ADD ..!").build());
 	}
 
+	/**
+	 * @BackEnd API * NOT IN USE
+	 */
+
+	@GetMapping("/MappedSubBranches")
+	public List<String> mappedBranches() {
+		List<String> responce = new ArrayList<>();
+
+		subDealerRepository.findAll().stream().forEach(e -> {
+			responce.add(dealerService.addAllMainBranches(e.getMainDealers().getMainDealerID(), e.getSubDealerID()));
+		});
+		return responce;
+	}
+
 	@PostMapping("/addsubbranch")
-	public ResponseEntity<responce> addSubBranches(@RequestParam String subDealerID,
+	public ResponseEntity<responce> addSubBranches(Authentication authentication,@RequestParam String subDealerID,
 			@RequestBody List<BranchDto> branches) {
+		
+		apirecords.save(ApiCallRecords.builder().apiname("addsubbranch")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(authentication.getName()+"="+subDealerID+"=>"+branches.stream().map(e->e.getBranchID()).collect(Collectors.toList()).toString()).build());
+
+		
 		String responces = dealerService.addSubBranches(subDealerID, branches);
 		if (responces.equalsIgnoreCase("Sucessfully Added"))
 			return ResponseEntity.status(HttpStatus.OK)
@@ -273,8 +328,14 @@ public class TwoWheelerDealerController {
 	}
 
 	@DeleteMapping("/removesubbranch")
-	public ResponseEntity<responce> removeSubBranches(@RequestParam String subDealerID,
+	public ResponseEntity<responce> removeSubBranches(Authentication authentication,@RequestParam String subDealerID,
 			@RequestBody List<BranchDto> branches) {
+		
+		apirecords.save(ApiCallRecords.builder().apiname("removesubbranch")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(authentication.getName()+"="+subDealerID+"=>"+branches.stream().map(e->e.getBranchID()).collect(Collectors.toList()).toString()).build());
+
+		
 		Boolean response = dealerService.removeSubBranches(subDealerID, branches);
 		if (response)
 			return ResponseEntity.status(HttpStatus.OK)
@@ -523,7 +584,7 @@ public class TwoWheelerDealerController {
 							district += e + ',';
 						count++;
 					});
-					
+
 					subrow.createCell(6).setCellValue(subitem.getState().trim());
 					subrow.createCell(7).setCellValue(district);
 					subrow.createCell(8).setCellValue(subitem.getCity().trim());
@@ -577,6 +638,13 @@ public class TwoWheelerDealerController {
 	@PostMapping("/addsubdealer")
 	public ResponseEntity<responce> addSubDealer(Authentication authentication, @RequestParam String mainDealerID,
 			@RequestBody SubDealerDetailsDto subDealerDetailsDto) {
+		
+//		Authentication authentication,
+		apirecords.save(ApiCallRecords.builder().apiname("addsubdealer")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(authentication.getName()+"=>"+subDealerDetailsDto.getSubDealerName()).build());
+
+		
 		Boolean check = dealerService.addSubDealers(mainDealerID, subDealerDetailsDto, authentication.getName());
 		if (check)
 			return ResponseEntity.status(HttpStatus.OK).body(responce.builder().error("False").data("--NA--")
@@ -592,6 +660,13 @@ public class TwoWheelerDealerController {
 	@PostMapping("/addmaindealer")
 	public ResponseEntity<responce> addMainDealer(Authentication authentication,
 			@RequestBody MainDealerDetailsDto dealerDetailsDto) {
+		
+//		Authentication authentication,
+		apirecords.save(ApiCallRecords.builder().apiname("addmaindealer")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(authentication.getName()+"=>"+dealerDetailsDto.getMainDealerName()).build());
+
+		
 		String addMainDealer = dealerService.addMainDealer(dealerDetailsDto, authentication.getName());
 		if (addMainDealer != null)
 			return ResponseEntity.status(HttpStatus.OK).body(responce.builder().error("False").data(addMainDealer)
@@ -640,6 +715,12 @@ public class TwoWheelerDealerController {
 	@PutMapping("/editmaindealer")
 	public ResponseEntity<responce> editMainDealer(Authentication authentication, @RequestParam String mainDealerID,
 			@RequestBody MainDealerDetailsDto mainDetailsDto) {
+		
+		apirecords.save(ApiCallRecords.builder().apiname("editmaindealer")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(authentication.getName()+"=>"+mainDealerID).build());
+
+		
 		Boolean check = dealerService.editMainDealer(mainDealerID, mainDetailsDto, authentication.getName());
 		if (check)
 			return ResponseEntity.status(HttpStatus.OK).body(responce.builder().error("False").data("--NA--")
@@ -652,6 +733,12 @@ public class TwoWheelerDealerController {
 	@PutMapping("/editsubdealer")
 	public ResponseEntity<responce> editSubDealer(Authentication authentication, @RequestParam String subDealerID,
 			@RequestBody SubDealerDetailsDto subDetailsDto) {
+		
+		apirecords.save(ApiCallRecords.builder().apiname("editsubdealer")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(authentication.getName()+"=>"+subDealerID).build());
+
+		
 		Boolean check = dealerService.editSubDealer(subDealerID, subDetailsDto, authentication.getName());
 
 		if (check) {
@@ -693,8 +780,14 @@ public class TwoWheelerDealerController {
 	 * @Api is use Adding Variant for MainDealer
 	 */
 	@PostMapping("/addmainvariant")
-	public ResponseEntity<responce> addMainVariants(@RequestParam String MainDealerID,
+	public ResponseEntity<responce> addMainVariants(Authentication authentication,@RequestParam String MainDealerID,
 			@RequestBody ArrayList<VehicleVariantDto> variants) {
+		
+		apirecords.save(ApiCallRecords.builder().apiname("addmainvariant")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(authentication.getName()+"=>"+MainDealerID+"=>"+variants.stream().map(e->e.getVariantID()).collect(Collectors.toList()).toString()).build());
+
+
 
 		boolean check = dealerService.addVeriantsMian(MainDealerID, variants);
 		if (check)
@@ -705,8 +798,15 @@ public class TwoWheelerDealerController {
 	}
 
 	@DeleteMapping("/removemainvariant")
-	public ResponseEntity<responce> removeMainVariants(@RequestParam String mainDealerID,
+	public ResponseEntity<responce> removeMainVariants(Authentication authentication,@RequestParam String mainDealerID,
 			@RequestBody ArrayList<VehicleVariantDto> variants) {
+		
+//		Authentication authentication,
+		apirecords.save(ApiCallRecords.builder().apiname("removemainvariant")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(authentication.getName()+"=>"+mainDealerID+"=>"+variants.stream().map(e->e.getVariantID()).collect(Collectors.toList()).toString()).build());
+
+
 
 		Boolean response = dealerService.removeMainVariant(mainDealerID, variants);
 		if (response)
@@ -744,8 +844,14 @@ public class TwoWheelerDealerController {
 	 * @Api is use Adding Variant for SubDealer
 	 */
 	@PostMapping("/addsubvariant")
-	public ResponseEntity<responce> addSubVariants(@RequestParam String subDealerID,
+	public ResponseEntity<responce> addSubVariants(Authentication authentication,@RequestParam String subDealerID,
 			@RequestBody ArrayList<VehicleVariantDto> variants) {
+		
+//		Authentication authentication,
+		apirecords.save(ApiCallRecords.builder().apiname("addsubvariant")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(authentication.getName()+"=>"+subDealerID+"=>"+variants.stream().map(e->e.getVariantID()).collect(Collectors.toList()).toString()).build());
+
 
 		boolean check = dealerService.addVariantSub(subDealerID, variants);
 		if (check)
@@ -756,8 +862,12 @@ public class TwoWheelerDealerController {
 	}
 
 	@DeleteMapping("/removesubvariant")
-	public ResponseEntity<responce> removeSubVariants(@RequestParam String subDealerID,
+	public ResponseEntity<responce> removeSubVariants(Authentication authentication,@RequestParam String subDealerID,
 			@RequestBody ArrayList<VehicleVariantDto> variants) {
+		apirecords.save(ApiCallRecords.builder().apiname("removesubvariant")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(authentication.getName()+"=>"+subDealerID+"=>"+variants.stream().map(e->e.getVariantID()).collect(Collectors.toList()).toString()).build());
+		
 		Boolean response = dealerService.removeSubVariant(subDealerID, variants);
 		if (response)
 			return ResponseEntity.status(HttpStatus.OK).body(responce.builder().error("FALSE")
@@ -766,5 +876,327 @@ public class TwoWheelerDealerController {
 				.body(responce.builder().error("TRUE").message("VARIANT NOT REMOVED ..!").data("NOT REMOVED").build());
 
 	}
+
+	// ============External purpose APIS=====================
+
+	@Autowired
+	JdbcTemplate jdbcTemplate;
+//	DealerDataRepository dataRepository;
+
+	@GetMapping("/getDealerByBranchID")
+	public ResponseEntity<responce> getDealerByBranchID(@RequestParam String branchID) {
+		
+		apirecords.save(ApiCallRecords.builder().apiname("getDealerByBranchID")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg("External").build());
+
+		
+		List<String> maindealearID = jdbcTemplate.queryForList(
+				"SELECT main_dealerid FROM maindealers_branches where  glbrancht24id='" + branchID + "'", String.class);
+		List<String> SubdealearID = jdbcTemplate.queryForList(
+				"SELECT sub_dealerid FROM subdealers_branches where glbrancht24id='" + branchID + "'", String.class);
+
+		List<CheckerDealersDto> collect = new ArrayList<>();
+
+		if (maindealearID != null & !maindealearID.isEmpty()) {
+			collect.addAll(maindealearID.stream().map(e -> {
+				MainDealer mainDealer = mainDealerRepository.findById(e).get();
+				return CheckerDealersDto.builder().DealerID(e).DealerName(mainDealer.getDealerName())
+						.DealerManufacturerName(mainDealer.getManufacturerName()).DealerMailID(mainDealer.getMailID())
+						.DealerContactNumber(mainDealer.getContactNumber())
+						.DealerAlternateContactNumber(mainDealer.getAlternateContactNumber())
+						.DealerContactPersonName(mainDealer.getContactPersonName())
+						.contactPersonMobile(mainDealer.getContactPersonMobile())
+						.DealerPanNumber(mainDealer.getPanNumber()).DealerGstNumber(mainDealer.getGstNumber())
+						.DealerBankName(mainDealer.getBankName()).DealerBankBranchName(mainDealer.getBankBranchName())
+						.DealerBankAccNumber(mainDealer.getBankAccNumber()).DealerIfsc(mainDealer.getIfsc())
+						.DealerAccountHolderName(mainDealer.getAccountHolderName()).state(mainDealer.getState())
+						.city(mainDealer.getCity()).pinCode(mainDealer.getPinCode())
+						.addressDetails(mainDealer.getArea()).build();
+			}).collect(Collectors.toList()));
+
+		}
+
+		if (SubdealearID != null & SubdealearID.isEmpty()) {
+			collect.addAll(SubdealearID.stream().map(e -> {
+				MainDealer subDealer = mainDealerRepository.findById(e).get();
+				return CheckerDealersDto.builder().DealerID(e).DealerName(subDealer.getDealerName())
+						.DealerManufacturerName(subDealer.getManufacturerName()).DealerMailID(subDealer.getMailID())
+						.DealerContactNumber(subDealer.getContactNumber())
+						.DealerAlternateContactNumber(subDealer.getAlternateContactNumber())
+						.DealerContactPersonName(subDealer.getContactPersonName())
+						.contactPersonMobile(subDealer.getContactPersonMobile())
+						.DealerPanNumber(subDealer.getPanNumber()).DealerGstNumber(subDealer.getGstNumber())
+						.DealerBankName(subDealer.getBankName()).DealerBankBranchName(subDealer.getBankBranchName())
+						.DealerBankAccNumber(subDealer.getBankAccNumber()).DealerIfsc(subDealer.getIfsc())
+						.DealerAccountHolderName(subDealer.getAccountHolderName()).state(subDealer.getState())
+						.city(subDealer.getCity()).pinCode(subDealer.getPinCode()).addressDetails(subDealer.getArea())
+						.build();
+			}).collect(Collectors.toList()));
+		}
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(responce.builder().error("FALSE").message("Dealers Data..!").data(collect).build());
+	}
+
+	@GetMapping("getDealerData")
+	public ResponseEntity<InputStreamResource> getDealerData() throws IOException {
+		
+		apirecords.save(ApiCallRecords.builder().apiname("getDealerData")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg("External").build());
+
+		System.out.println("http://localhost:9888/getDealerData========================");
+		
+		List<DealerData> dealerData = new ArrayList<>();// 765935
+//		try {
+		mainDealerRepository.findAll().stream().forEach(mainData -> {
+
+			mainData.getMainBranches().stream().distinct().forEach(mb -> {
+				mainData.getVeriants().stream().distinct().forEach(mv -> {
+					DealerData build = DealerData.builder()
+							.id(mainData.getMainDealerID() + "|" + mb.getBranchID() + "|" + mv.getVehicalPriceID())
+							.dealersID(mainData.getMainDealerID()).oem(mainData.getManufacturerName())
+							.dalersName(mainData.getDealerName()).dealeraddress(mainData.getCity())
+							.phoneNumber(mainData.getContactNumber() + "").branchID(mb.getBranchID())
+							.branchName(mb.getBranchName()).region(mb.getRegion()).area(mb.getArea())
+							.state(mb.getState()).vehicalPriceID(mv.getVehicalPriceID())
+							.vehicalOnRoadPrice(mv.getVehicalOnRoadPrice())
+							.vehicalMaxLoanAmount(mv.getVehicalMaxLoanAmount()).ExshowroomPrice(mv.getExshowroomPrice())
+							.variantName(mv.getVariantName()).model(mv.getModel()).build();
+					dealerData.add(build);
+				});
+			});
+//------------
+			List<SubDealer> subDealer = mainData.getSubDealer();
+			if (!subDealer.isEmpty() & subDealer != null) {
+				subDealer.stream().distinct().forEach(subData -> {
+					subData.getSubBranches().stream().distinct().forEach(sb -> {
+						subData.getVehicleVeriants().stream().distinct().forEach(sv -> {
+
+							dealerData.add(DealerData.builder()
+									.id(subData.getSubDealerID() + "|" + sb.getBranchID() + "|"
+											+ sv.getVehicalPriceID())
+									.dealersID(subData.getSubDealerID()).oem(subData.getManufacturerName())
+									.dalersName(subData.getDealerName()).dealeraddress(subData.getCity())
+									.phoneNumber(subData.getContactNumber() + "").branchID(sb.getBranchID())
+									.branchName(sb.getBranchName()).region(sb.getRegion()).area(sb.getArea())
+									.state(sb.getState()).vehicalPriceID(sv.getVehicalPriceID())
+									.vehicalOnRoadPrice(sv.getVehicalOnRoadPrice())
+									.vehicalMaxLoanAmount(sv.getVehicalMaxLoanAmount())
+									.ExshowroomPrice(sv.getExshowroomPrice()).variantName(sv.getVariantName())
+									.model(sv.getModel()).build());
+						});
+					});
+
+				});
+			}
+		});
+		System.out.println(dealerData.size() + "===================");
+		SXSSFWorkbook workBook = new SXSSFWorkbook();
+		// custom text
+		Font font = workBook.createFont();
+		font.setFontName("Arial");
+		font.setBold(false);
+		font.setColor(IndexedColors.WHITE.getIndex());
+		CellStyle cellStyle = workBook.createCellStyle();
+		cellStyle.setFont(font);
+		cellStyle.setFillForegroundColor(IndexedColors.BLACK.getIndex());
+		cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+		
+		int sheetcount=1;
+		//create Sheet
+		SXSSFSheet sheet = workBook.createSheet("My Data-"+sheetcount++);
+		// create header row
+
+		SXSSFRow header = sheet.createRow(0);// SXSSFSheet
+
+		SXSSFCell cell0 = header.createCell(0);
+		cell0.setCellStyle(cellStyle);
+		cell0.setCellValue("id");
+
+		SXSSFCell cell2 = header.createCell(1);
+		cell2.setCellStyle(cellStyle);
+		cell2.setCellValue("oem");
+
+		SXSSFCell cell = header.createCell(2);
+		cell.setCellStyle(cellStyle);
+		cell.setCellValue("dealersID");
+
+		SXSSFCell cellu = header.createCell(3);
+		cellu.setCellStyle(cellStyle);
+		cellu.setCellValue("Dealer_Name");
+
+		SXSSFCell cell3 = header.createCell(4);
+		cell3.setCellStyle(cellStyle);
+		cell3.setCellValue("Dealer_Address");
+
+		SXSSFCell cell4 = header.createCell(5);
+		cell4.setCellStyle(cellStyle);
+		cell4.setCellValue("Phone_Number");
+
+		SXSSFCell cell5 = header.createCell(6);
+		cell5.setCellStyle(cellStyle);
+		cell5.setCellValue("branchID");
+
+		SXSSFCell cell6 = header.createCell(7);
+		cell6.setCellStyle(cellStyle);
+		cell6.setCellValue("Branch_Name");
+
+		SXSSFCell cell10 = header.createCell(8);
+		cell10.setCellStyle(cellStyle);
+		cell10.setCellValue("vehicalPriceID");
+
+		SXSSFCell cell12 = header.createCell(9);
+		cell12.setCellStyle(cellStyle);
+		cell12.setCellValue("VariantName");
+
+		SXSSFCell cell13 = header.createCell(10);
+		cell13.setCellStyle(cellStyle);
+		cell13.setCellValue("Model");
+
+		SXSSFCell cell11 = header.createCell(11);
+		cell11.setCellStyle(cellStyle);
+		cell11.setCellValue("VehicalOnRoadPrice");
+
+		// create data rows
+		int rowNum = 1;
+		
+		for (DealerData item : dealerData) {
+
+			if(rowNum == 1048570) {
+				System.out.println(rowNum+"++++++++1048570+++++++++"+sheetcount);
+				rowNum=1;
+				sheet=	workBook.createSheet("My Data-"+sheetcount++);
+				System.out.println(rowNum+"++++++++1048570+++++++++"+sheetcount);
+			}
+				SXSSFRow row = sheet.createRow(rowNum++);
+				row.createCell(0).setCellValue(item.getId());
+				row.createCell(1).setCellValue(item.getOem());
+				row.createCell(2).setCellValue(item.getDealersID());
+				row.createCell(3).setCellValue(item.getDalersName());
+				row.createCell(4).setCellValue(item.getDealeraddress());
+				row.createCell(5).setCellValue(item.getPhoneNumber());
+				row.createCell(6).setCellValue(item.getBranchID());
+				row.createCell(7).setCellValue(item.getBranchName());
+				row.createCell(8).setCellValue(item.getVehicalPriceID());
+				row.createCell(9).setCellValue(item.getVariantName());
+				row.createCell(10).setCellValue(item.getModel());
+				row.createCell(11).setCellValue(item.getVehicalOnRoadPrice());
+		}
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		workBook.write(outputStream);
+		workBook.dispose();
+
+		byte[] byteArray = outputStream.toByteArray();
+		ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArray);
+		InputStreamResource inputStreamResource = new InputStreamResource(byteArrayInputStream);
+		return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=Data.xlsx")
+				.contentType(MediaType.parseMediaType("application/vnd.ms-excel")).body(inputStreamResource);
+
+//			return ResponseEntity.status(HttpStatus.OK).body(responce.builder().error("FALSE").data(dealerData.size())
+//					.message("All DealerData fetched..!").build());
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//			return ResponseEntity.status(HttpStatus.OK).body(responce.builder().error("TRUE").data(dealerData)
+//					.message("Exception Occrred[Reverify with Branch]").build());
+//		}
+	}
+
+	/**
+	 * @req_By @Shyna
+	 * 
+	 * @return Data Dump base on BranchID
+	 */
+	@GetMapping("/TWdetailByBranchID")//TWdetailByBranchID
+	public ResponseEntity<responce> getDealerWithBranch(@RequestParam String branchID) {
+		
+		apirecords.save(ApiCallRecords.builder().apiname("TWdetailByBranchID")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg("External").build());
+
+		
+		
+		List<String> mainDealerIDS = jdbcTemplate.queryForList(
+				"SELECT main_dealerid FROM maindealers_branches where glbrancht24id='" + branchID + "'", String.class);
+		List<String> subDealerIDS = jdbcTemplate.queryForList(
+				"SELECT sub_dealerid FROM subdealers_branches where glbrancht24id='" + branchID + "'", String.class);
+
+		List<DealerData> dealerData = new ArrayList<>();
+
+		if (!mainDealerIDS.isEmpty() & mainDealerIDS != null) {
+			mainDealerIDS.stream().forEach(e -> {
+				MainDealer mainData = mainDealerRepository.findById(e).get();
+				Branch mb = branchRepository.findById(branchID).get();
+				mainData.getVeriants().stream().forEach(mv -> {
+					DealerData build = DealerData.builder()
+							.id(mainData.getMainDealerID() + "|" + mb.getBranchID() + "|" + mv.getVehicalPriceID())
+							.dealersID(mainData.getMainDealerID()).oem(mainData.getManufacturerName())
+							.dalersName(mainData.getDealerName()).dealeraddress(mainData.getCity())
+							.phoneNumber(mainData.getContactNumber() + "").branchID(mb.getBranchID())
+							.branchName(mb.getBranchName()).region(mb.getRegion()).area(mb.getArea())
+							.state(mb.getState()).vehicalPriceID(mv.getVehicalPriceID())
+							.vehicalOnRoadPrice(mv.getVehicalOnRoadPrice())
+							.vehicalMaxLoanAmount(mv.getVehicalMaxLoanAmount()).ExshowroomPrice(mv.getExshowroomPrice())
+							.variantName(mv.getVariantName()).model(mv.getModel()).build();
+					dealerData.add(build);
+				});
+			});
+		}
+
+		if (!subDealerIDS.isEmpty() & subDealerIDS != null) {
+			subDealerIDS.stream().forEach(e -> {
+				SubDealer subData = subDealerRepository.findById(e).get();
+				Branch mb = branchRepository.findById(branchID).get();
+				subData.getVehicleVeriants().stream().forEach(mv -> {
+					DealerData build = DealerData.builder()
+							.id(subData.getSubDealerID() + "|" + mb.getBranchID() + "|" + mv.getVehicalPriceID())
+							.dealersID(subData.getSubDealerID()).oem(subData.getManufacturerName())
+							.dalersName(subData.getDealerName()).dealeraddress(subData.getCity())
+							.phoneNumber(subData.getContactNumber() + "").branchID(mb.getBranchID())
+							.branchName(mb.getBranchName()).region(mb.getRegion()).area(mb.getArea())
+							.state(mb.getState()).vehicalPriceID(mv.getVehicalPriceID())
+							.vehicalOnRoadPrice(mv.getVehicalOnRoadPrice())
+							.vehicalMaxLoanAmount(mv.getVehicalMaxLoanAmount()).ExshowroomPrice(mv.getExshowroomPrice())
+							.variantName(mv.getVariantName()).model(mv.getModel()).build();
+					dealerData.add(build);
+				});
+
+			});
+		}
+		return ResponseEntity.status(HttpStatus.OK).body(
+				responce.builder().error("false").data(dealerData).message("Dealer dump base on branchID").build());
+
+	}
+
+//	@GetMapping("/getDealerBranchDump")
+//	public ResponseEntity<responce> getDealerWithBranch() {
+//		List<DealerBranchData> dealerBranchData = new ArrayList<>();
+//		mainDealerRepository.findAll().stream().forEach(mainData -> {
+//			mainData.getMainBranches().stream().forEach(mb -> {
+//				dealerBranchData.add(DealerBranchData.builder().area(mb.getArea()).branchID(mb.getBranchID())
+//						.branchName(mb.getBranchName()).dalersName(mainData.getDealerName())
+//						.dealeraddress(mainData.getCity()).dealersID(mainData.getMainDealerID())
+//						.oem(mainData.getManufacturerName()).phoneNumber(mainData.getContactNumber() + "")
+//						.region(mb.getRegion()).state(mb.getState()).build());
+//
+//			});
+//
+//			mainData.getSubDealer().forEach(subData -> {
+//				subData.getSubBranches().stream().forEach(sb -> {
+//					dealerBranchData.add(DealerBranchData.builder().area(sb.getArea()).branchID(sb.getBranchID())
+//							.branchName(sb.getBranchName()).dalersName(subData.getDealerName())
+//							.dealeraddress(subData.getCity()).dealersID(subData.getSubDealerID())
+//							.oem(subData.getManufacturerName()).phoneNumber(subData.getContactNumber() + "")
+//							.region(sb.getRegion()).state(sb.getState()).build());
+//				});
+//
+//			});
+//
+//		});
+//		return ResponseEntity.status(HttpStatus.OK).body(responce.builder().error("FALSE").data(dealerBranchData)
+//				.message("All Data for Dealer With Branches ").build());
+//
+//	}
 
 }

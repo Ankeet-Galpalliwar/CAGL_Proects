@@ -24,9 +24,11 @@ import org.springframework.web.bind.annotation.RestController;
 import com.cag.twowheeler.dto.CheckerDealersDto;
 import com.cag.twowheeler.dto.MainDealerDetailsDto;
 import com.cag.twowheeler.dto.SubDealerDetailsDto;
+import com.cag.twowheeler.entity.ApiCallRecords;
 import com.cag.twowheeler.entity.MainDealer;
 import com.cag.twowheeler.entity.SubDealer;
 import com.cag.twowheeler.exceptation.AlreadyExist;
+import com.cag.twowheeler.repository.ApiCallRepository;
 import com.cag.twowheeler.repository.MainDealerRepository;
 import com.cag.twowheeler.repository.SubDealerRepository;
 import com.cag.twowheeler.responce.responce;
@@ -101,10 +103,19 @@ public class CheckerController {
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(responce.builder().error("False").data(checkerDealers).message(" Dealer Data Fetch..!").build());
 	}
+	@Autowired
+	ApiCallRepository apirecords;
 
+	
 	@PostMapping("/updatestatusoredit")
 	public ResponseEntity<responce> modifyStatus(Authentication authentication, @RequestParam String dealerID,
 			@RequestBody CheckerDealersDto checkerDealersDto) {
+		
+
+		apirecords.save(ApiCallRecords.builder().apiname("updatestatusoredit")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(authentication.getName()+"="+dealerID).build());
+
 		String userName = authentication.getName();
 		if (dealerID.substring(11).equalsIgnoreCase("A01")) {
 			MainDealer mainDealer = mainDealerRepository.findById(dealerID).get();

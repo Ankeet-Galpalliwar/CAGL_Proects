@@ -43,7 +43,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			// Dealer Apis
 			"/addsubdealer", "/addmaindealer", "/editmaindealer", "/editsubdealer"
 			// variant Apis
-			 };
+	};
 
 	// Checker-maker APIs
 	public static final String[] CMApis = { "/allstatesdropdown", "/getoems", "/statedropdown", "/regiondropdown",
@@ -51,8 +51,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			// only for view purpose for checker
 			"/getsubdealers", "/getmaindealers"
 			// variant api
-			, "/vehicleallstate", "/vehiclealloem", "/vehicleModels", "/vehiclevariantdropdown",
-			"/vehicaldata",
+			, "/vehicleallstate", "/vehiclealloem", "/vehicleModels", "/vehiclevariantdropdown", "/vehicaldata",
 			// Main variant
 			"/mainvariants", "/avaliablemainvariants", "/addmainvariant", "/removemainvariant",
 			// Sub variant
@@ -64,14 +63,19 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			"/addallmainbranches", "/addsubbranch", "/removesubbranch", "/showsubbranchesS",
 			"/showavaliablesubbranches",
 			// variant image upload
-			"/allvariants", "/uploadVariantimage" };
+			 "/uploadVariantimage",
+			// Additional API
+			"/MappedSubBranches",
+			};
 
 	// PermitAll APi Login APi..
 	public static final String[] permitAllAPIs = { "/login/userlogin", "/getspecificvariants", "/districtdropdown",
-			"/generatepassword", "/alldistrictdropdown","/vehiclevariants","/alloem"
+			"/generatepassword", "/alldistrictdropdown", "/vehiclevariants", "/alloem", "/getDealerData"
 			// image view
 			, "/viewimage", "/viewvariantimage", "/getfile", "/downloadexcel", "/downloadvariantsexcel",
-			"/getbranchexcel", "/getbranchstate", "/insertvehicle", "/editdata" };
+			"/getbranchexcel", "/getbranchstate", "/insertvehicle", "/editdata","/getDealerByBranchID",
+			//Amoga Apis
+			"/veriantinfo","/manufacturebybranchid","/dealersinfo","/allvariants","/TWdetailByBranchID"};
 
 	@Override
 	protected void configure(HttpSecurity http) throws Exception {

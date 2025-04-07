@@ -64,10 +64,10 @@ public class User implements UserDetails {
 		return auth;
 	}
 
-	public String getStatus() {
-		// TODO Auto-generated method stub
-		return this.status;
-	}
+//	public String getStatus() {
+//		// TODO Auto-generated method stub
+//		return this.status;
+//	}
 
 	
 	@Override

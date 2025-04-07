@@ -16,6 +16,8 @@ import lombok.ToString;
 @Builder
 @ToString
 public class VariantDetailsDto {
+	
+	private String variantID;
 
 	private double vehicalOnRoadPrice;
 

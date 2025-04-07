@@ -23,6 +23,7 @@ public interface VehicalPriceRepository extends JpaRepository<VehicalPrice, Stri
 	List<VehicalPrice> findByStateAndOem(String state, String oem);
 
 	List<VehicalPrice> findByVariantName(String variantNamae);
+	
 
 	@Modifying
 	@Query(value = "update vehical_price set variant=:newName where variant=:oldName", nativeQuery = true)

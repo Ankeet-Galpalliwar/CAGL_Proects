@@ -16,5 +16,8 @@ public class loanId {
 
 	@JsonProperty("loanId")
 	private String loanId;
+	
+	@JsonProperty("id")
+	private long id;
 
 }

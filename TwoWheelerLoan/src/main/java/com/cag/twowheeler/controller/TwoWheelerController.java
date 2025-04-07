@@ -4,6 +4,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -27,6 +29,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -38,16 +41,23 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.cag.twowheeler.dto.CheckerDealersDto;
 import com.cag.twowheeler.dto.CustomVariantInfo;
 import com.cag.twowheeler.dto.InseartVehicle;
 import com.cag.twowheeler.dto.VariantDetailsDto;
 import com.cag.twowheeler.dto.VariantExcelDto;
 import com.cag.twowheeler.dto.VehicalsAllData;
 import com.cag.twowheeler.dto.VehicleVariantDto;
+import com.cag.twowheeler.entity.ApiCallRecords;
 import com.cag.twowheeler.entity.Branch;
+import com.cag.twowheeler.entity.MainDealer;
+import com.cag.twowheeler.entity.SubDealer;
 import com.cag.twowheeler.entity.VehicalPrice;
 import com.cag.twowheeler.entity.VehicalVariant;
+import com.cag.twowheeler.repository.ApiCallRepository;
 import com.cag.twowheeler.repository.BranchRepository;
+import com.cag.twowheeler.repository.MainDealerRepository;
+import com.cag.twowheeler.repository.SubDealerRepository;
 import com.cag.twowheeler.repository.VehicalOemRepository;
 import com.cag.twowheeler.repository.VehicalPriceRepository;
 import com.cag.twowheeler.repository.VehicalVariantRepository;
@@ -63,6 +73,9 @@ import com.cag.twowheeler.service.TwoWheelerService;
 public class TwoWheelerController {
 
 	@Autowired
+	ApiCallRepository apirecords;
+	
+	@Autowired
 	private TwoWheelerService service;
 
 	@Autowired
@@ -76,6 +89,15 @@ public class TwoWheelerController {
 
 	@Autowired
 	VehicalPriceRepository priceRepository;
+
+	@Autowired
+	JdbcTemplate jdbcTemplate;
+
+	@Autowired
+	MainDealerRepository mainDealerRepository;
+
+	@Autowired
+	SubDealerRepository subDealerRepository;
 
 	public final String STROAGE_PATH = "D:\\Twowheeler_Dealer_managment_Documents\\Vehicle_Variant_Images\\";
 
@@ -99,6 +121,11 @@ public class TwoWheelerController {
 	@PutMapping("/editdata")
 	public ResponseEntity<responce> editvehicleData(Authentication authentication, @RequestParam String variantID,
 			@RequestBody VehicalsAllData data) {
+		
+		apirecords.save(ApiCallRecords.builder().apiname("editvehicleData")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(authentication.getName()+"=>"+variantID ).build());
+		
 		Boolean responces = service.editVehicleData(variantID, data, authentication.getName());
 		if (responces)
 			return ResponseEntity.status(HttpStatus.OK).body(
@@ -213,13 +240,20 @@ public class TwoWheelerController {
 	 */
 	@PostMapping("/insertvehicle")
 	public ResponseEntity<responce> insertVehical(@RequestBody InseartVehicle vehicle, Authentication authentication) {
+		
+		apirecords.save(ApiCallRecords.builder().apiname("insertvehicle")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(authentication.getName()+"=>"+vehicle.toString()).build());
+		
 		String message = service.addVehicle(vehicle, authentication.getName());
 		if (message.equals("Vehical Alrady Exist with Given State"))
 			return ResponseEntity.status(HttpStatus.OK)
 					.body(responce.builder().error("True").message(message).data("--").build());
-		else
+		else {
+
 			return ResponseEntity.status(HttpStatus.OK)
 					.body(responce.builder().error("false").message(message).data("--").build());
+		}
 
 	}
 
@@ -397,4 +431,117 @@ public class TwoWheelerController {
 		}
 		return null;
 	}
+
+	// ==============Amoga Apis=======================
+
+	@GetMapping("/manufacturebybranchid")
+	public ResponseEntity<responce> getOemByBranchID(@RequestParam String branchID) {
+		Optional<Branch> branchOptional = branchRepository.findById(branchID);
+		if (branchOptional.isPresent()) {
+			Branch branch = branchOptional.get();
+			List<String> queryForList = new ArrayList<>();
+			queryForList = jdbcTemplate.queryForList(
+					"SELECT distinct oem FROM vehical_price where state='" + branch.getState() + "'", String.class);
+			return ResponseEntity.status(HttpStatus.OK).body(responce.builder().error("false").data(queryForList)
+					.message(branch.getState() + " all Manufacture").build());
+		}
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(responce.builder().error("True").data(null).message("Manufacture not exist").build());
+	}
+
+	@GetMapping("/veriantinfo")
+	public ResponseEntity<responce> getvariantsDetails(@RequestParam String branchID,
+			@RequestParam String manufacture) {
+		Optional<Branch> branchOptional = branchRepository.findById(branchID);
+		if (branchOptional.isPresent()) {
+			Branch branch = branchOptional.get();
+			List<VehicalPrice> variantData = priceRepository.findByStateAndOem(branch.getState(), manufacture);
+			if (!variantData.isEmpty() & variantData != null) {
+				List<VariantDetailsDto> vData = variantData.stream().map(e -> {
+					return VariantDetailsDto.builder().variantID(e.getVehicalPriceID())
+							.ExshowroomPrice(e.getExshowroomPrice()).model(e.getModel()).oem(e.getOem())
+							.state(e.getState()).variantName(e.getVariantName())
+							.vehicalMaxLoanAmount(e.getVehicalMaxLoanAmount())
+							.vehicalOnRoadPrice(e.getVehicalOnRoadPrice()).build();
+				}).collect(Collectors.toList());
+				return ResponseEntity.status(HttpStatus.OK)
+						.body(responce.builder().error("False").data(vData).message("All Variant Details").build());
+			}
+		}
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(responce.builder().error("True").data(null).message("Variant details not exist").build());
+	}
+
+	@GetMapping("/dealersinfo")
+	public ResponseEntity<responce> getDealerInfo(@RequestParam String variantID, @RequestParam String branchID) {
+		List<String> mainDealersID = jdbcTemplate.queryForList(
+				"SELECT distinct main_dealerid FROM maindealers_branches where glbrancht24id='" + branchID + "'",
+				String.class);
+		List<String> subDealersID = jdbcTemplate.queryForList(
+				"SELECT distinct sub_dealerid FROM subdealers_branches where glbrancht24id='" + branchID + "'",
+				String.class);
+
+		List<String> MV = jdbcTemplate.queryForList(
+				"SELECT distinct main_dealerid FROM maindealers__vehicles where vehicle_veriant_id='" + variantID + "'",
+				String.class);
+		List<String> SV = jdbcTemplate.queryForList(
+				"SELECT distinct sub_dealerid FROM subdealers__vehicles where vehicle_veriant_id='" + variantID + "'",
+				String.class);
+		
+	
+		
+		
+		List<CheckerDealersDto> Dealer = new ArrayList<>();
+		if (!mainDealersID.isEmpty() & mainDealersID != null) {
+
+			mainDealersID.stream().forEach(e -> {
+				MainDealer mainDealer = mainDealerRepository.findById(e).get();
+				
+				if (MV.contains(e)) {
+					Dealer.add(CheckerDealersDto.builder().addressDetails(mainDealer.getCity())
+							.city(mainDealer.getArea()).contactPersonMobile(mainDealer.getContactPersonMobile())
+							.DealerAccountHolderName(mainDealer.getAccountHolderName())
+							.DealerAlternateContactNumber(mainDealer.getAlternateContactNumber())
+							.DealerBankAccNumber(mainDealer.getBankAccNumber())
+							.DealerBankBranchName(mainDealer.getBankBranchName())
+							.DealerBankName(mainDealer.getBankName()).DealerContactNumber(mainDealer.getContactNumber())
+							.DealerContactPersonName(mainDealer.getContactPersonName())
+							.DealerGstNumber(mainDealer.getGstNumber()).DealerID(mainDealer.getMainDealerID())
+							.DealerIfsc(mainDealer.getIfsc()).DealerMailID(mainDealer.getMailID())
+							.DealerManufacturerName(mainDealer.getManufacturerName())
+							.DealerName(mainDealer.getDealerName()).DealerPanNumber(mainDealer.getPanNumber())
+							.dealerType(mainDealer.getDelearType()).pinCode(mainDealer.getPinCode())
+							.state(mainDealer.getState()).build());
+				}
+			});
+
+		}
+		
+		if (!subDealersID.isEmpty() & subDealersID != null) {
+
+			subDealersID.stream().forEach(e -> {
+				SubDealer subDealer = subDealerRepository.findById(e).get();
+				if (SV.contains(e)) {
+					Dealer.add(CheckerDealersDto.builder().addressDetails(subDealer.getCity()).city(subDealer.getArea())
+							.contactPersonMobile(subDealer.getContactPersonMobile())
+							.DealerAccountHolderName(subDealer.getAccountHolderName())
+							.DealerAlternateContactNumber(subDealer.getAlternateContactNumber())
+							.DealerBankAccNumber(subDealer.getBankAccNumber())
+							.DealerBankBranchName(subDealer.getBankBranchName()).DealerBankName(subDealer.getBankName())
+							.DealerContactNumber(subDealer.getContactNumber())
+							.DealerContactPersonName(subDealer.getContactPersonName())
+							.DealerGstNumber(subDealer.getGstNumber()).DealerID(subDealer.getSubDealerID())
+							.DealerIfsc(subDealer.getIfsc()).DealerMailID(subDealer.getMailID())
+							.DealerManufacturerName(subDealer.getManufacturerName())
+							.DealerName(subDealer.getDealerName()).DealerPanNumber(subDealer.getPanNumber())
+							.dealerType(subDealer.getDelearType()).pinCode(subDealer.getPinCode())
+							.state(subDealer.getState()).build());
+				}
+			});
+		}
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(responce.builder().error("False").data(Dealer).message("Dealer details base on "+variantID+"-"+branchID).build());
+
+	}
+
 }

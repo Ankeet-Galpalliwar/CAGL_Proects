@@ -1,7 +1,5 @@
 package com.cagl.dto;
 
-import java.util.List;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.AllArgsConstructor;
@@ -55,7 +53,7 @@ public class Foirinsert {
 	private long no_Of_ENQUIRIES;
 
 	@JsonProperty("product")
-	private long product;
+	private String product;
 
 	@JsonProperty("branch_ID")
 	private String branch_ID;

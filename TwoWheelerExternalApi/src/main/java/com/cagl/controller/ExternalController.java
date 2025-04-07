@@ -64,9 +64,6 @@ public class ExternalController {
 
 	@Autowired
 	private branchRepository branchRepository;
-	
-	
-	
 
 	@GetMapping("/getkendras")
 	public ResponseEntity<Responce> getKendras(@RequestParam String branchID) {
@@ -111,7 +108,7 @@ public class ExternalController {
 	}
 
 //  Below APIS For UAT
-	
+
 	@PostMapping("/ComboCbReport")
 	public ResponseEntity<Responce> comboCbReport(@RequestBody ComboCbReport cbReport) {
 		RestTemplate restTemplate = new RestTemplate();
@@ -120,123 +117,149 @@ public class ExternalController {
 		HttpEntity<ComboCbReport> requestEntity = new HttpEntity<>(cbReport);
 
 		// Send the POST request to the third-party API
-		ResponseEntity<ComboCbReportResponce> responseEntity = restTemplate.exchange(apiUrl, HttpMethod.POST,
-				requestEntity, ComboCbReportResponce.class);
+		//ComboCbReportResponce
+		ResponseEntity<Object> responseEntity = restTemplate.exchange(apiUrl, HttpMethod.POST,
+				requestEntity, Object.class);
 
 		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().Error(Boolean.FALSE)
-				.data(responseEntity.getBody()).message("comboCbReport").build());
+				.data(responseEntity.getBody()).message("(UAT)comboCbReport Responce").build());
 	}
-	
+
 	@PostMapping("/InquiryAgent")
 	public String inquiryAgent(@RequestParam String requestXml) {
 		RestTemplate restTemplate = new RestTemplate();
 		String apiUrl = "http://172.16.109.29:8081/InquiryAgentOriginal/doGet.service/request";
 		// Set request headers
-				HttpHeaders headers = new HttpHeaders();	
+		HttpHeaders headers = new HttpHeaders();
 //				headers.setContentType(MediaType.APPLICATION_JSON);
-				headers.set("userId","GK_NEWGEN_UAT");
-				headers.set("password","+GW1NiOxIf007lQmx5Llwzr4wic=");
-				headers.set("requestId","10000008");
-				headers.set("responseType","INDV|ALL");
-				headers.set("Content-Type","application/json");
-				headers.set("requestXML",requestXml);
+		headers.set("userId", "GK_NEWGEN_UAT");
+		headers.set("password", "+GW1NiOxIf007lQmx5Llwzr4wic=");
+		headers.set("requestId", "10000008");
+		headers.set("responseType", "INDV|ALL");
+		headers.set("Content-Type", "application/json");
+		headers.set("requestXML", requestXml);
 		HttpEntity<String> requestEntity = new HttpEntity<>(headers);
 		// Send the POST request to the third-party API
-		ResponseEntity<String> responseEntity = restTemplate.exchange(apiUrl, HttpMethod.POST,requestEntity,String.class);
-		 return responseEntity.getBody();
+		ResponseEntity<String> responseEntity = restTemplate.exchange(apiUrl, HttpMethod.POST, requestEntity,
+				String.class);
+		return responseEntity.getBody();
 	}
-	
+
 	@PostMapping("/unnathiresponse")
 	public String unnathiresponse(@RequestParam unnathiresponse unnathiResponse) {
 		RestTemplate restTemplate = new RestTemplate();
 		String apiUrl = "http://172.16.106.7:9999/unnathiresponsive/unnathiresponse";
-				
+
 		HttpEntity<unnathiresponse> requestEntity = new HttpEntity<>(unnathiResponse);
 		// Send the POST request to the third-party API
-		ResponseEntity<String> responseEntity = restTemplate.exchange(apiUrl, HttpMethod.POST,requestEntity,String.class);
-		 return responseEntity.getBody();
+		ResponseEntity<String> responseEntity = restTemplate.exchange(apiUrl, HttpMethod.POST, requestEntity,
+				String.class);
+		return responseEntity.getBody();
 	}
 
-	@PostMapping("/twowheelerresponse")
-	public ResponseEntity<Responce> twowheelerresponse(@RequestBody loanId loanId) {
-		RestTemplate restTemplate = new RestTemplate();
-		String apiUrl = "http://" + env.getProperty("uatIP") + ":9999/twowheelerresponsive/twowheelerresponse";
-		// Create an HttpEntity with the request object and headers
-		HttpEntity<loanId> requestEntity = new HttpEntity<>(loanId);
-
-		// Send the POST request to the third-party API
-		ResponseEntity<TwoWheelerResponsiveResponce> responseEntity = restTemplate.exchange(apiUrl, HttpMethod.POST,
-				requestEntity, TwoWheelerResponsiveResponce.class);
-
-		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().Error(Boolean.FALSE)
-				.data(responseEntity.getBody()).message("twowheelerresponse").build());
-	}
-
-	@PostMapping("foiriTwowheelerInsert")
+	@PostMapping("/foiriTwowheelerInsert")
 	public ResponseEntity<Responce> FoiriInsert(@RequestBody Foirinsert foirinsert) {
 		RestTemplate restTemplate = new RestTemplate();
 		String apiUrl = "http://" + env.getProperty("uatIP") + ":9999/twowheelerinsert/twowheelerinsert";
 		// Create an HttpEntity with the request object and headers
 		HttpEntity<Foirinsert> requestEntity = new HttpEntity<>(foirinsert);
 		// Send the POST request to the third-party API
-		ResponseEntity<FoirinsertResponce> responseEntity = restTemplate.exchange(apiUrl, HttpMethod.POST,
-				requestEntity, FoirinsertResponce.class);
-		if (responseEntity.getBody() != null)
+		//FoirinsertResponce
+		ResponseEntity<Object> responseEntity = restTemplate.exchange(apiUrl, HttpMethod.POST,
+				requestEntity, Object.class);
+//		if (responseEntity.getBody() != null)
 			return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().Error(Boolean.FALSE)
-					.data(responseEntity.getBody()).message("Data Insert Sucessfully").build());
-		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-				.body(Responce.builder().Error(Boolean.TRUE).data(null).message("Data Not Insert").build());
+					.data(responseEntity.getBody()).message("(UAT)foiriTwowheelerInsert Responce").build());
+//		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+//				.body(Responce.builder().Error(Boolean.TRUE).data(null).message("Data Not Insert").build());
 	}
-// Below APIS For Product...!
 
-	@PostMapping("/ComboCbReport/prod")
-	public ResponseEntity<Responce> comboCbReportprod(@RequestBody ComboCbReport cbReport) {
+	@PostMapping("/foiriTwowheelerInsert/Prod")
+	public ResponseEntity<Responce> Foiriinsertprod(@RequestBody Foirinsert foirinsert1) {
 		RestTemplate restTemplate = new RestTemplate();
-		String apiUrl = "http://" + env.getProperty("prodIP") + ":8080/CAGLComboReport/ComboCbReport/makeRequest";
-		                                                      //":8130/CAGLComboReport/ComboCbReport/makeRequest";
+		String apiUrl = "http://" + env.getProperty("prodIP") + ":9999/twowheelerinsert/twowheelerinsert";
 		// Create an HttpEntity with the request object and headers
-		HttpEntity<ComboCbReport> requestEntity = new HttpEntity<>(cbReport);
+		HttpEntity<Foirinsert> requestEntity = new HttpEntity<>(foirinsert1);
+		// Send the POST request to the third-party API
+		ResponseEntity<Object> responseEntity = restTemplate.exchange(apiUrl, HttpMethod.POST,
+				requestEntity, Object.class);
+//		if (responseEntity.getBody() != null)
+			return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().Error(Boolean.FALSE)
+					.data(responseEntity.getBody()).message("(Prod)foiriTwowheelerInsert Responce").build());
+//		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+//				.body(Responce.builder().Error(Boolean.TRUE).data(null).message("Data Not Insert").build());
+
+	}
+
+	//For Production Testing
+	@PostMapping("foiriTwowheelerInsert/prod")
+	public ResponseEntity<Responce> FoiriInsertprod(@RequestBody Foirinsert foirinsert) {
+		RestTemplate restTemplate = new RestTemplate();
+		String apiUrl = "http://" + env.getProperty("prodIP") + ":9999/twowheelerinsert/twowheelerinsert";
+		// Create an HttpEntity with the request object and headers
+		HttpEntity<Foirinsert> requestEntity = new HttpEntity<>(foirinsert);
+		// Send the POST request to the third-party API
+		//FoirinsertResponce
+		ResponseEntity<Object> responseEntity = restTemplate.exchange(apiUrl, HttpMethod.POST,
+				requestEntity, Object.class);
+//		if (responseEntity.getBody() != null)
+			return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().Error(Boolean.FALSE)
+					.data(responseEntity.getBody()).message("foiriTwowheelerInsert_Responce").build());
+//		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+//				.body(Responce.builder().Error(Boolean.TRUE).data(null).message("Data Not Insert").build());
+	}
+	@PostMapping("/twowheelerresponse")
+	public ResponseEntity<Responce> twowheelerresponse(@RequestBody loanId loanId) {
+		RestTemplate restTemplate = new RestTemplate();
+		String apiUrl = "http://" + env.getProperty("uatIP") + ":9999/twowheelerresponsive/twowheelerresponse";
+//		String apiUrl = "http://uatmobile.grameenkoota.in:9999/twowheelerresponsive/twowheelerresponse";
+		// Create an HttpEntity with the request object and headers 172.16.106.7
+		HttpEntity<loanId> requestEntity = new HttpEntity<>(loanId);
 
 		// Send the POST request to the third-party API
-		ResponseEntity<ComboCbReportResponce> responseEntity = restTemplate.exchange(apiUrl, HttpMethod.POST,
-				requestEntity, ComboCbReportResponce.class);
+		ResponseEntity<Object> responseEntity = restTemplate.exchange(apiUrl, HttpMethod.POST,
+				requestEntity, Object.class);
 
 		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().Error(Boolean.FALSE)
-				.data(responseEntity.getBody()).message("comboCbReport").build());
+				.data(responseEntity.getBody()).message("twowheelerresponse").build());
 	}
+// Below APIS For Product...!
 
 	@PostMapping("/twowheelerresponse/prod")
 	public ResponseEntity<Responce> twowheelerresponseprod(@RequestBody loanId loanId) {
 		RestTemplate restTemplate = new RestTemplate();
 		String apiUrl = "http://" + env.getProperty("prodIP") + ":9999/twowheelerresponsive/twowheelerresponse";
-		                                                      //":9999/twowheelerresponsive/twowheelerresponse";
-		// Create an HttpEntity with the request object and headers
+//		String apiUrl = "http://uatmobile.grameenkoota.in:9999/twowheelerresponsive/twowheelerresponse";
+		// Create an HttpEntity with the request object and headers 172.16.3.178
 		HttpEntity<loanId> requestEntity = new HttpEntity<>(loanId);
 
 		// Send the POST request to the third-party API
-		ResponseEntity<TwoWheelerResponsiveResponce> responseEntity = restTemplate.exchange(apiUrl, HttpMethod.POST,
-				requestEntity, TwoWheelerResponsiveResponce.class);
+		ResponseEntity<Object> responseEntity = restTemplate.exchange(apiUrl, HttpMethod.POST,
+				requestEntity, Object.class);
+		
 
 		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().Error(Boolean.FALSE)
 				.data(responseEntity.getBody()).message("twowheelerresponse").build());
 	}
 
-	@PostMapping("foiriTwowheelerInsert/prod")
-	public ResponseEntity<Responce> FoiriInsertprod(@RequestBody Foirinsert foirinsert) {
+	@PostMapping("/ComboCbReport/prod")
+	public ResponseEntity<Responce> comboCbReportprod(@RequestBody ComboCbReport cbReport) {
 		RestTemplate restTemplate = new RestTemplate();
-		String apiUrl = "http://" + env.getProperty("prodIP") + ":9999/twowheelerinsert/twowheelerinsert";
-		                                                       //:9999/twowheelerinsert/twowheelerinsert"
+		String apiUrl = "http://" + env.getProperty("prodIP") + ":8080/CAGLComboReport/ComboCbReport/makeRequest";
+		// ":8130/CAGLComboReport/ComboCbReport/makeRequest";
 		// Create an HttpEntity with the request object and headers
-		HttpEntity<Foirinsert> requestEntity = new HttpEntity<>(foirinsert);
+		HttpEntity<ComboCbReport> requestEntity = new HttpEntity<>(cbReport);
+
 		// Send the POST request to the third-party API
-		ResponseEntity<FoirinsertResponce> responseEntity = restTemplate.exchange(apiUrl, HttpMethod.POST,
-				requestEntity, FoirinsertResponce.class);
-		if (responseEntity.getBody() != null)
-			return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().Error(Boolean.FALSE)
-					.data(responseEntity.getBody()).message("Data Insert Sucessfully").build());
-		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-				.body(Responce.builder().Error(Boolean.TRUE).data(null).message("Data Not Insert").build());
+		//ComboCbReportResponce
+		ResponseEntity<Object> responseEntity = restTemplate.exchange(apiUrl, HttpMethod.POST,
+				requestEntity, Object.class);
+
+		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().Error(Boolean.FALSE)
+				.data(responseEntity.getBody()).message("comboCbReport Responce").build());
 	}
+
+	
 
 	@GetMapping("getbranchinfo")
 	public ResponseEntity<Responce> getBranchDetails(@RequestParam String branchID) {

@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,7 +25,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.cag.twowheeler.dto.VehicalsAllData;
+import com.cag.twowheeler.entity.ApiCallRecords;
 import com.cag.twowheeler.entity.VehicalPrice;
+import com.cag.twowheeler.repository.ApiCallRepository;
 import com.cag.twowheeler.repository.MainDealerRepository;
 import com.cag.twowheeler.repository.SubDealerRepository;
 import com.cag.twowheeler.repository.VehicalPriceRepository;
@@ -42,6 +45,13 @@ public class CheckerControllerVehicleManagement {
 
 	@Autowired
 	private SubDealerRepository subDealerRepository;
+	
+	@Autowired
+	ApiCallRepository apirecords;
+	
+	@Autowired
+	JdbcTemplate jdbcTemplate;
+
 
 	@GetMapping("/getCheckerVehicleData")
 	public ResponseEntity<responce> getAllUpdatedVehicleData() {
@@ -84,9 +94,16 @@ public class CheckerControllerVehicleManagement {
 
 	}
 
+	
 	@PostMapping("/editOrApproveCheckerData")
 	public ResponseEntity<responce> editOrApprovedVehicleData(Authentication authentication, @RequestParam String id,
 			@RequestBody VehicalsAllData data) {
+		
+		apirecords.save(ApiCallRecords.builder().apiname("editOrApproveCheckerData")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(authentication.getName()+"="+id).build());
+
+		
 		Optional<VehicalPrice> vehicle = priceRepository.findById(id.trim());
 		if (vehicle.isPresent()) {
 			VehicalPrice v1 = vehicle.get();
@@ -102,26 +119,40 @@ public class CheckerControllerVehicleManagement {
 			v1.setUpdaterUserID(v1.getUpdaterUserID());
 			v1.setModel(data.getVehicleModel());
 			VehicalPrice save = priceRepository.save(v1);
+			
 			if (save != null & data.getStatus().equalsIgnoreCase("APPROVED")) {
+				
+				//=======ADD Variant to Main Dealer========(If not)
 				mainDealerRepository.findAll().stream()
 						.filter(e -> e.getState().equalsIgnoreCase(vehicle.get().getState())
-								& e.getManufacturerName().equalsIgnoreCase(vehicle.get().getOem()))
+								& e.getManufacturerName().equalsIgnoreCase(v1.getOem()))
 						.forEach(main -> {
 							List<VehicalPrice> veriants = main.getVeriants();
 							if (!veriants.contains(vehicle.get())) {
-								veriants.add(vehicle.get());
+								
+								try {
+									jdbcTemplate.execute("INSERT INTO `maindealers__vehicles` VALUES ('" + main.getMainDealerID() + "','"
+											+ vehicle.get().getVehicalPriceID() + "')");
+
+								} catch (Exception ex) {
+									// TODO: handle exception
+								}
 							}
-							mainDealerRepository.save(main);
 						});
+				//=======ADD Variant to SUB Dealer========(If not)
 				subDealerRepository.findAll().stream()
 						.filter(e -> e.getState().equalsIgnoreCase(vehicle.get().getState())
 								& e.getManufacturerName().equalsIgnoreCase(vehicle.get().getOem()))
 						.forEach(sub -> {
 							List<VehicalPrice> Veriants = sub.getVehicleVeriants();
 							if (!Veriants.contains(vehicle.get())) {
-								Veriants.add(vehicle.get());
+								try {
+									jdbcTemplate.execute(
+											"INSERT INTO `subdealers__vehicles` VALUES ('" + sub.getSubDealerID() + "','" + vehicle.get().getVehicalPriceID() + "')");
+								}catch (Exception x) {
+									// TODO: handle exception
+								}
 							}
-							subDealerRepository.save(sub);
 						});
 
 			}

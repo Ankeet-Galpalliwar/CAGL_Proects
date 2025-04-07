@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
@@ -14,6 +13,8 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import com.cag.twowheeler.dto.BranchDto;
@@ -49,6 +50,9 @@ public class TwoWheelerDealerServiceImpl implements TwoWheelerDealerService {
 	VehicalPriceRepository vehicalPriceRepository;
 	@Autowired
 	BranchRepository branchRepository;
+
+	@Autowired
+	NamedParameterJdbcTemplate jdbcTemplate2;
 
 	String district = "";
 	int count = 1;
@@ -131,10 +135,10 @@ public class TwoWheelerDealerServiceImpl implements TwoWheelerDealerService {
 	public String addMainDealer(MainDealerDetailsDto dealer, String userName) {
 		if (mainDealerRepository.findByBankAccNumber(dealer.getMainDealerBankAccNumber()) != null)
 			throw new AlreadyExist("Bank_Account Number", "ERROR_CODE_000");
-		if (mainDealerRepository.findByPanNumber(dealer.getMainDealerPanNumber()) != null)
-			throw new AlreadyExist("PanCard_Number", "ERROR_CODE_000");
-		if (mainDealerRepository.findByGstNumber(dealer.getMainDealerGstNumber()) != null)
-			throw new AlreadyExist("Gst_Number", "ERROR_CODE_000");
+//		if (mainDealerRepository.findByPanNumber(dealer.getMainDealerPanNumber()) != null)
+//			throw new AlreadyExist("PanCard_Number", "ERROR_CODE_000");
+//		if (mainDealerRepository.findByGstNumber(dealer.getMainDealerGstNumber()) != null)
+//			throw new AlreadyExist("Gst_Number", "ERROR_CODE_000");
 
 		if (dealer != null) {
 			// Get State Abbreviation
@@ -322,7 +326,7 @@ public class TwoWheelerDealerServiceImpl implements TwoWheelerDealerService {
 					else
 						district += e + ',';
 					count++;
-				});
+				});// Avoid (,) at End.
 
 				MainDealer newMainDealer = MainDealer.builder().status("UPDATED").updatedDate(LocalDate.now())
 						.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
@@ -353,7 +357,19 @@ public class TwoWheelerDealerServiceImpl implements TwoWheelerDealerService {
 				mainDealer.setMainDealerID(mainDealerId); // Seating original Id {Because it will Be zero }
 				mainDealer.setPaymentEligible("YES");
 //				mainDealer.setMainBranches(mainDealer.getMainBranches());
-				mainDealerRepository.save(mainDealer);
+				MainDealer save = mainDealerRepository.save(mainDealer);
+				// Automatically Updated Sub Dealer Bank Details
+				mainDealer.getSubDealer().stream().forEach(e -> {
+					e.setAccountHolderName(save.getAccountHolderName());
+					e.setBankAccNumber(save.getBankAccNumber());
+					e.setBankBranchName(save.getBankBranchName());
+					e.setBankName(save.getBankName());
+					e.setGstNumber(save.getGstNumber());
+					e.setPanNumber(save.getPanNumber());
+					e.setIfsc(save.getIfsc());
+					subDealerRepository.save(e);
+				});
+
 				return Boolean.TRUE;
 			}
 		}
@@ -430,10 +446,8 @@ public class TwoWheelerDealerServiceImpl implements TwoWheelerDealerService {
 
 	@Override
 	public List<String> getOem() {
-
 		return mainDealerRepository.findAll().stream().map(data -> data.getManufacturerName().trim()).distinct()
 				.collect(Collectors.toList());
-
 	}
 
 	@Override
@@ -517,6 +531,7 @@ public class TwoWheelerDealerServiceImpl implements TwoWheelerDealerService {
 	}
 
 //===============================Branches============================================
+
 	@Override
 	public String addMainBranches(String mainDealerID, List<BranchDto> branchs) {
 		// Get Main Dealer By ID
@@ -526,15 +541,27 @@ public class TwoWheelerDealerServiceImpl implements TwoWheelerDealerService {
 			branchs.stream().forEach(e -> {
 				Branch branch = branchRepository.findById(e.getBranchID()).get();
 				if (!mainBranches.contains(branch))
-					mainBranches.add(branch);
+					jdbcTemplate.execute("INSERT INTO `maindealers_branches` VALUES('" + mainDealerID + "','"
+							+ e.getBranchID() + "')");
 			});
-			mainDealer.setMainBranches(mainBranches);
-			mainDealerRepository.save(mainDealer);
 			return "Sucessfully Added";
 		}
 		return "Not Added";
 	}
 
+//	MainDealer mainDealer = mainDealerRepository.findById(mainDealerID).get();
+//	List<Branch> mainBranches = mainDealer.getMainBranches();
+//	if (!branchs.isEmpty()) {
+//		branchs.stream().forEach(e -> {
+//			Branch branch = branchRepository.findById(e.getBranchID()).get();
+//			if (!mainBranches.contains(branch))
+//				mainBranches.add(branch);
+//		});
+//		mainDealer.setMainBranches(mainBranches);
+//		mainDealerRepository.save(mainDealer);
+//		return "Sucessfully Added";
+//	}
+//	return "Not Added";
 	@Override
 	public Boolean removeMainBranches(String mainDealerID, List<BranchDto> branchs) {
 		MainDealer mainDealer = mainDealerRepository.findById(mainDealerID).get();
@@ -543,15 +570,30 @@ public class TwoWheelerDealerServiceImpl implements TwoWheelerDealerService {
 			branchs.stream().forEach(e -> {
 				Branch branch = branchRepository.findById(e.getBranchID()).get();
 				if (mainBranches.contains(branch)) {
-					mainBranches.remove(branch);
+					jdbcTemplate.execute("delete from maindealers_branches where main_dealerid='" + mainDealerID
+							+ "' and glbrancht24id='" + e.getBranchID() + "'");
 				}
 			});
-			mainDealer.setMainBranches(mainBranches);
-			mainDealerRepository.save(mainDealer);
 			return Boolean.TRUE;
 		}
 		return Boolean.FALSE;
 	}
+
+//	MainDealer mainDealer = mainDealerRepository.findById(mainDealerID).get();
+//	List<Branch> mainBranches = mainDealer.getMainBranches();
+//	if (!branchs.isEmpty()) {
+//		branchs.stream().forEach(e -> {
+//			Branch branch = branchRepository.findById(e.getBranchID()).get();
+//			if (mainBranches.contains(branch)) {
+//
+//				mainBranches.remove(branch);
+//			}
+//		});
+//		mainDealer.setMainBranches(mainBranches);
+//		mainDealerRepository.save(mainDealer);
+//		return Boolean.TRUE;
+//	}
+//	return Boolean.FALSE;
 
 	@Override
 	public Set<BranchDto> showMainBranches(String mainDealerID) {
@@ -716,14 +758,27 @@ public class TwoWheelerDealerServiceImpl implements TwoWheelerDealerService {
 			List<Branch> subBranches = subDealer.getSubBranches();
 			mainBranches.stream().forEach(e -> {
 				if (!subBranches.contains(e))
-					subBranches.add(e);
+					jdbcTemplate.execute("INSERT INTO `subdealers_branches` VALUES('" + subDealerID + "','"
+							+ e.getBranchID() + "')");
 			});
-			subDealer.setSubBranches(subBranches);
-			subDealerRepository.save(subDealer);
-			return "Sucessfully Added";
+			return "Sucessfully Added=>" + subDealerID;
 		}
-		return "Not Added Sucessfully";
+		return "Not Added Sucessfully =>" + subDealerID;
 	}
+
+//	List<Branch> mainBranches = mainDealerRepository.findById(mainDealerID).get().getMainBranches();
+//	if (!mainBranches.isEmpty()) {
+//		SubDealer subDealer = subDealerRepository.findById(subDealerID).get();
+//		List<Branch> subBranches = subDealer.getSubBranches();
+//		mainBranches.stream().forEach(e -> {
+//			if (!subBranches.contains(e))
+//				subBranches.add(e);
+//		});
+//		subDealer.setSubBranches(subBranches);
+//		subDealerRepository.save(subDealer);
+//		return "Sucessfully Added=>" + subDealerID;
+//	}
+//	return "Not Added Sucessfully =>" + subDealerID;
 
 	@Override
 	public String addSubBranches(String subDealerID, List<BranchDto> branchs) {
@@ -733,15 +788,29 @@ public class TwoWheelerDealerServiceImpl implements TwoWheelerDealerService {
 			branchs.stream().forEach(e -> {
 				Branch branch = branchRepository.findById(e.getBranchID()).get();
 				if (!subBranches.contains(branch)) {
-					subBranches.add(branch);
+					jdbcTemplate.execute("INSERT INTO `subdealers_branches` VALUES('" + subDealerID + "','"
+							+ e.getBranchID() + "')");
 				}
 			});
-			subDealer.setSubBranches(subBranches);
-			subDealerRepository.save(subDealer);
 			return "Sucessfully Added";
 		}
 		return "Not Added Sucessfully";
 	}
+
+//	SubDealer subDealer = subDealerRepository.findById(subDealerID).get();
+//	List<Branch> subBranches = subDealer.getSubBranches();
+//	if (!branchs.isEmpty()) {
+//		branchs.stream().forEach(e -> {
+//			Branch branch = branchRepository.findById(e.getBranchID()).get();
+//			if (!subBranches.contains(branch)) {
+//				subBranches.add(branch);
+//			}
+//		});
+//		subDealer.setSubBranches(subBranches);
+//		subDealerRepository.save(subDealer);
+//		return "Sucessfully Added";
+//	}
+//	return "Not Added Sucessfully";
 
 	@Override
 	public Boolean removeSubBranches(String subDealerID, List<BranchDto> branchs) {
@@ -752,15 +821,30 @@ public class TwoWheelerDealerServiceImpl implements TwoWheelerDealerService {
 				Branch branch = branchRepository.findById(e.getBranchID()).get();
 
 				if (subBranches.contains(branch))
-					subBranches.remove(branch);
+					jdbcTemplate.execute("delete from subdealers_branches where sub_dealerid='" + subDealerID
+							+ "' and glbrancht24id='" + e.getBranchID() + "'");
 
 			});
-			subDealer.setSubBranches(subBranches);
-			subDealerRepository.save(subDealer);
 			return Boolean.TRUE;
 		}
 		return Boolean.FALSE;
 	}
+
+//	SubDealer subDealer = subDealerRepository.findById(subDealerID).get();
+//	List<Branch> subBranches = subDealer.getSubBranches();
+//	if (!branchs.isEmpty()) {
+//		branchs.stream().forEach(e -> {
+//			Branch branch = branchRepository.findById(e.getBranchID()).get();
+//
+//			if (subBranches.contains(branch))
+//				subBranches.remove(branch);
+//
+//		});
+//		subDealer.setSubBranches(subBranches);
+//		subDealerRepository.save(subDealer);
+//		return Boolean.TRUE;
+//	}
+//	return Boolean.FALSE;
 
 //===============================================================================================	
 //=============================NON USE API=======================================================
@@ -811,6 +895,9 @@ public class TwoWheelerDealerServiceImpl implements TwoWheelerDealerService {
 		return avaliableVariants;
 	}
 
+	@Autowired
+	JdbcTemplate jdbcTemplate;
+
 	@Override
 	public boolean addVeriantsMian(String mainDealerID, List<VehicleVariantDto> variants) {
 		Optional<MainDealer> dealer = mainDealerRepository.findById(mainDealerID);
@@ -821,16 +908,39 @@ public class TwoWheelerDealerServiceImpl implements TwoWheelerDealerService {
 				Optional<VehicalPrice> optionalData = vehicalPriceRepository.findById(e.getVariantID());
 				if (optionalData.isPresent()) {
 					VehicalPrice vehicalPriceData = optionalData.get();
-					if (!varientsList.contains(vehicalPriceData))
-						varientsList.add(vehicalPriceData);
+					if (!varientsList.contains(vehicalPriceData)) {
+						try {
+							jdbcTemplate.execute("INSERT INTO `maindealers__vehicles` VALUES ('" + mainDealerID + "','"
+									+ e.getVariantID() + "')");
+
+						} catch (Exception ex) {
+							// TODO: handle exception
+						}
+					}
 				}
 			});
-			mainDealer.setVeriants(varientsList);
-			mainDealerRepository.save(mainDealer);
 			return Boolean.TRUE;
 		}
 		return Boolean.FALSE;
 	}
+
+//	Optional<MainDealer> dealer = mainDealerRepository.findById(mainDealerID);
+//	if (dealer.isPresent()) {
+//		MainDealer mainDealer = dealer.get();
+//		List<VehicalPrice> varientsList = mainDealer.getVeriants();
+//		variants.stream().forEach(e -> {
+//			Optional<VehicalPrice> optionalData = vehicalPriceRepository.findById(e.getVariantID());
+//			if (optionalData.isPresent()) {
+//				VehicalPrice vehicalPriceData = optionalData.get();
+//				if (!varientsList.contains(vehicalPriceData))
+//					varientsList.add(vehicalPriceData);
+//			}
+//		});
+//		mainDealer.setVeriants(varientsList);
+//		mainDealerRepository.save(mainDealer);
+//		return Boolean.TRUE;
+//	}
+//	return Boolean.FALSE;
 
 	@Override
 	public Boolean removeMainVariant(String mainDealerID, List<VehicleVariantDto> variants) {
@@ -839,16 +949,30 @@ public class TwoWheelerDealerServiceImpl implements TwoWheelerDealerService {
 		variants.stream().forEach(e -> {
 			Optional<VehicalPrice> optionalData = vehicalPriceRepository.findById(e.getVariantID());
 			if (optionalData.isPresent()) {
-				VehicalPrice vehicalPrice = optionalData.get();
-				veriants.remove(vehicalPrice);
+				jdbcTemplate.execute("delete from `maindealers__vehicles` where main_dealerid='" + mainDealerID
+						+ "'  and vehicle_veriant_id='" + e.getVariantID() + "'");
 			}
 		});
-		mainDealer.setVeriants(veriants);
-		MainDealer responce = mainDealerRepository.save(mainDealer);
-		if (responce != null)
-			return Boolean.TRUE;
-		return Boolean.FALSE;
+
+		return Boolean.TRUE;
+//		return Boolean.FALSE;
 	}
+
+//	MainDealer mainDealer = mainDealerRepository.findById(mainDealerID).get();
+//	List<VehicalPrice> veriants = mainDealer.getVeriants();
+//	variants.stream().forEach(e -> {
+//		Optional<VehicalPrice> optionalData = vehicalPriceRepository.findById(e.getVariantID());
+//		if (optionalData.isPresent()) {
+//			VehicalPrice vehicalPrice = optionalData.get();
+////			jdbcTemplate.execute(mainDealerID);
+//			veriants.remove(vehicalPrice);
+//		}
+//	});
+//	mainDealer.setVeriants(veriants);
+//	MainDealer responce = mainDealerRepository.save(mainDealer);
+//	if (responce != null)
+//		return Boolean.TRUE;
+//	return Boolean.FALSE;
 
 	@Override
 	public List<VehicleVariantDto> subVariants(String subDealerID) {
@@ -900,31 +1024,58 @@ public class TwoWheelerDealerServiceImpl implements TwoWheelerDealerService {
 		List<VehicalPrice> subVeriants = subDealer.getVehicleVeriants();
 		variants.stream().forEach(e -> {
 			VehicalPrice vehicalPriceData = vehicalPriceRepository.findById(e.getVariantID()).get();
-			if (!subVeriants.contains(vehicalPriceData))
-				subVeriants.add(vehicalPriceData);
+			if (!subVeriants.contains(vehicalPriceData)) {
+				try {
+					jdbcTemplate.execute(
+							"INSERT INTO `subdealers__vehicles` VALUES ('" + subDealerID + "','" + e.getVariantID() + "')");
+
+				}catch (Exception x) {
+					// TODO: handle exception
+				}
+				
+			}
 		});
-		subDealer.setVehicleVeriants(subVeriants);
-		subDealerRepository.save(subDealer);
 		return Boolean.TRUE;
 	}
 
+//	SubDealer subDealer = subDealerRepository.findById(subDealerID).get();
+//	List<VehicalPrice> subVeriants = subDealer.getVehicleVeriants();
+//	variants.stream().forEach(e -> {
+//		VehicalPrice vehicalPriceData = vehicalPriceRepository.findById(e.getVariantID()).get();
+//		if (!subVeriants.contains(vehicalPriceData))
+//			subVeriants.add(vehicalPriceData);
+//	});
+//	subDealer.setVehicleVeriants(subVeriants);
+//	subDealerRepository.save(subDealer);
+//	return Boolean.TRUE;
+
 	@Override
 	public Boolean removeSubVariant(String subDealerID, List<VehicleVariantDto> variants) {
-		SubDealer subDealer = subDealerRepository.findById(subDealerID).get();
-		List<VehicalPrice> vehicleVeriants = subDealer.getVehicleVeriants();
 		variants.stream().forEach(e -> {
 			Optional<VehicalPrice> optionalData = vehicalPriceRepository.findById(e.getVariantID());
 			if (optionalData.isPresent()) {
-				VehicalPrice vehical = optionalData.get();
-				vehicleVeriants.remove(vehical);
+				jdbcTemplate.execute("delete from `subdealers__vehicles` where sub_dealerid='" + subDealerID
+						+ "'  and vehicle_veriant_id='" + e.getVariantID() + "'");
 			}
 		});
-		subDealer.setVehicleVeriants(vehicleVeriants);
-		SubDealer response = subDealerRepository.save(subDealer);
-		if (response != null)
-			return Boolean.TRUE;
-
-		return Boolean.FALSE;
+		return Boolean.TRUE;
+//		return Boolean.FALSE;
 	}
-
 }
+
+//SubDealer subDealer = subDealerRepository.findById(subDealerID).get();
+//List<VehicalPrice> vehicleVeriants = subDealer.getVehicleVeriants();
+//variants.stream().forEach(e -> {
+//	Optional<VehicalPrice> optionalData = vehicalPriceRepository.findById(e.getVariantID());
+//	if (optionalData.isPresent()) {
+//		VehicalPrice vehical = optionalData.get();
+//		vehicleVeriants.remove(vehical);
+//	}
+//});
+//subDealer.setVehicleVeriants(vehicleVeriants);
+//SubDealer response = subDealerRepository.save(subDealer);
+//if (response != null)
+//	return Boolean.TRUE;
+//
+//return Boolean.FALSE;
+//}

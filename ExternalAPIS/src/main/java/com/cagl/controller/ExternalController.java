@@ -62,7 +62,7 @@ public class ExternalController {
 				.body(Responce.builder().Error(Boolean.TRUE).message("kendras Not Present").data("---NA---").build());
 	}
 
-	@RequestMapping("/getcustomers")
+	@GetMapping("/getcustomers")
 	public ResponseEntity<Responce> getcustomers(@RequestParam String kendraId) {
 		List<CustomerDto> customerDtos = new ArrayList<>();
 		try {
